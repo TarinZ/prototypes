@@ -1,5 +1,5 @@
-from helperFunctions import *
-import torchvision.datasets as dset
+from helper_functions import *
+# import torchvision.datasets as dset
 
 
 
@@ -14,7 +14,7 @@ def show_denoised(ax, sig_noisysig_out, ylims = [-1.5, 1.5], pause_time = 0.0, s
     
     # Special graph for viz
     if save_flag == True:
-        for ii in xrange(2):
+        for ii in range(2):
             ax[ii].cla()       
             ax[ii].plot(sig_noisysig_out[ii+1].T,'-g')
             ax[ii].set_ylim(ylims)        
@@ -22,7 +22,7 @@ def show_denoised(ax, sig_noisysig_out, ylims = [-1.5, 1.5], pause_time = 0.0, s
         # plt.tight_layout()            
 
     else:
-        for ii in xrange(3):
+        for ii in range(3):
             ax[ii].cla()       
             ax[ii].plot(sig_noisysig_out[ii].T,'.-')
             ax[ii].set_ylim(ylims)
@@ -33,7 +33,7 @@ def show_denoised(ax, sig_noisysig_out, ylims = [-1.5, 1.5], pause_time = 0.0, s
 
 def create_signals(n_data_points, n_total, f_fs, f_range, t_range):
     original_signals = np.zeros((n_data_points, n_total)).astype(np.float32)
-    for ii in xrange(n_data_points):    
+    for ii in range(n_data_points):    
         # signal parameters
         f_signal = np.random.uniform(f_range[0], f_range[1])
         t_signal = np.random.uniform(t_range[0], t_range[1])
@@ -41,7 +41,7 @@ def create_signals(n_data_points, n_total, f_fs, f_range, t_range):
         i_begin = np.int(np.floor(np.random.uniform(0, n_total - n_signal)))
 
         # create the signal    
-        signal = np.array([np.sin(2*np.pi*f_signal*nn/f_fs) for nn in xrange(n_signal)]).astype(np.float32)            
+        signal = np.array([np.sin(2*np.pi*f_signal*nn/f_fs) for nn in range(n_signal)]).astype(np.float32)            
         original_signals[ii, i_begin : i_begin + n_signal] = signal
     return original_signals
 
@@ -189,7 +189,7 @@ for ee in range(N.epochs):
     training_batch_iterator = iter(train_loader)    
     
 
-    for bb in xrange(N.batches_per_epoch):
+    for bb in range(N.batches_per_epoch):
 
         # Get signal batch
         signal = training_batch_iterator.next()
@@ -252,7 +252,7 @@ for ee in range(N.epochs):
             # val_output = decoder(encoder(val_noisy_signal))
             val_encoder_output = encoder(val_noisy_signal)
 
-            pdb.set_trace()
+            # pdb.set_trace()
             
             val_output = decoder(val_encoder_output)
             
