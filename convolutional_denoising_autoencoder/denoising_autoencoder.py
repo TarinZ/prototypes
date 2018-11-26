@@ -57,6 +57,7 @@ I = lambda:0
 # User inputs
 parser = argparse.ArgumentParser(description='Settings')
 parser.add_argument('-s', dest='save_denoising_images_directory', required = False, type=str)
+parser.add_argument('-g', dest='gpu', required = False, type=int)
 args = parser.parse_args()
 
 # Plots
@@ -76,7 +77,7 @@ plt.pause(0.01)
 # pdb.set_trace()
 
 
-N.training_data_points = 700
+N.training_data_points = 1000
 N.val_data_points = 50
 F.fs = 5000.0
 F.range = [400, 800]
@@ -86,7 +87,7 @@ N.total = np.int(np.round(F.fs * T.total)) # samples
 noise_var = 0.5
 # original_signals = np.zeros((N.data_points, N.total)).astype(np.float32)
 # Set Hyperparameters
-N.epochs = 50
+N.epochs = 200
 N.batch_size = 10
 N.batches_per_val = 15 # The validation set is run every N.batches_per_val batch times.
 # N.batches_per_val = 10 # The validation set is run every N.batches_per_val batch times.
@@ -134,9 +135,14 @@ class Encoder(nn.Module):
         
         out = self.layer1(x)                
         return out
-    
-# encoder = Encoder().cuda()
-encoder = Encoder()
+
+
+# If GPU in use
+if args.gpu == 1:    
+    print("GPU")
+    encoder = Encoder().cuda()
+else:
+    encoder = Encoder()
 
 
 class Decoder(nn.Module):
@@ -161,8 +167,12 @@ class Decoder(nn.Module):
         out = self.layer1(x)                
         return out
 
-# decoder = Decoder().cuda()
-decoder = Decoder()
+
+if args.gpu == 1:
+    print("GPU")
+    decoder = Decoder().cuda()
+else:    
+    decoder = Decoder()
 
 
 parameters = list(encoder.parameters())+ list(decoder.parameters())
@@ -200,17 +210,18 @@ for ee in range(N.epochs):
         # Add noise to the signal
         noisy_signal = signal + noise
 
-        # Get signal and noise_signal as variables
-        signal = Variable(signal)
-        noisy_signal = Variable(noisy_signal)
+        # Get signal and noise_signal as variables        
+        if args.gpu == 1:
+            signal = Variable(signal).cuda()
+            noisy_signal = Variable(noisy_signal).cuda()
 
         
         # Zero out the gradients so that they are not accumulated
         optimizer.zero_grad()
 
         # Pass through denoising autoencoder
-        output = encoder(noisy_signal)
-        output = decoder(output)
+        encoder_output = encoder(noisy_signal)
+        output = decoder(encoder_output)
 
         # Compute loss
         loss = loss_func(output,signal)
@@ -246,7 +257,11 @@ for ee in range(N.epochs):
             # pdb.set_trace()
             val_signal = val_batch_iterator.next()
             val_noise = torch.Tensor(noise_var * np.random.randn(N.val_data_points, 1, N.total))
-            val_noisy_signal = val_signal + val_noise
+            val_noisy_signal = val_signal + val_noise                        
+            if args.gpu == 1:
+                val_signal = Variable(val_signal).cuda()
+                val_noisy_signal = Variable(val_noisy_signal).cuda()
+                                                
 
             # Pass through denoising autoencoder
             # val_output = decoder(encoder(val_noisy_signal))
@@ -274,7 +289,7 @@ for ee in range(N.epochs):
             ax2[1].cla()
             ax2[1].plot(train_val_loss_vector[0,:].T,'.-'); 
             ax2[1].plot(train_val_loss_vector[1,:].T,'.-g'); plt.show()
-            ax2[1].set_ylim([-0.05, 0.25])
+            ax2[1].set_ylim([-0.05, 0.3])
             ax2[1].grid(True)
 
 
@@ -288,7 +303,17 @@ for ee in range(N.epochs):
 
     # Print stats
     print("Epoch: %1d / %1d" % (ee, N.epochs) , " MSE loss: %2.4f" % float(loss.data))    
-    show_denoised(ax1, select_signals(0, val_signal, val_noisy_signal, val_output), ylims = [-2, 2])
+
+    if args.gpu == 1:
+        val_signal = val_signal.cpu()
+        val_noisy_signal = val_noisy_signal.cpu()
+        val_output = val_output.cpu()
+        signal = signal.cpu()
+        noisy_signal = noisy_signal.cpu()
+        output = output.cpu()
+
+    # show_denoised(ax1, select_signals(0, val_signal, val_noisy_signal, val_output), ylims = [-2, 2])
+    show_denoised(ax1, select_signals(0, signal, noisy_signal, output), ylims = [-2, 2])
 
     # Show every iteration of training loss
     ax2[0].cla()
